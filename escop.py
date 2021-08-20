@@ -88,10 +88,16 @@ class Physical_Rect(Rect):
 
         self.vel.y += GRAVITY
 
-        if self.pos.y + self.h > SCREEN_HEIGHT:
+        if self.pos.y + self.h > SCREEN_HEIGHT: #check if too high
             self.pos.y = SCREEN_HEIGHT - self.h
             self.vel.y = 0
             self.is_jumping = False
+        if self.pos.x + self.w + 10 > SCREEN_WIDTH: #check if too far to right
+            self.pos.x = SCREEN_WIDTH - self.w
+            self.vel.x = 0
+        if self.pos.x - 10 < 0: #check if too far to left
+            self.pos.x = 0
+            self.vel.x = 0
 
 
 class Cop(Physical_Rect):

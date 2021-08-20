@@ -106,7 +106,7 @@ class Cop(Physical_Rect):
     def update(self):
         Physical_Rect.update(self)
 
-class Coon(Physical_Rect):
+class Racoon(Physical_Rect):
     def __init__(self, x, y, w, h, image):
         Physical_Rect.__init__(self, x, y, w, h, image=image)
 
@@ -158,14 +158,14 @@ def main():
         'space' : False
     }
 
-    coon = Coon(0, 0, 140, 140, pygame.image.load('Images/coon.png'))
+    racoon = Racoon(0, 0, 140, 140, pygame.image.load('Images/racoon.png'))
     cop = Cop(300, 0, 130, 160, pygame.image.load('Images/cop.png'))
 
     common_objs = {}
     gameobjects = []
-    gameobjects.append(coon)
+    gameobjects.append(racoon)
     gameobjects.append(cop)
-    common_objs['player'] = coon
+    common_objs['player'] = racoon
     common_objs['test_cop'] = cop
 
     while not stop:

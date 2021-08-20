@@ -20,6 +20,7 @@ DEFAULT_COLOR = RED
 SCREEN_WIDTH = 1200
 SCREEN_HEIGHT = 700
 GRAVITY = 1
+MOVE_SPEED = 8
 
 class Vector2():
     def __init__(self, x, y):
@@ -61,6 +62,8 @@ class Entity():
 class Rect(Entity):
     def __init__(self, x, y, w, h, image = None, color = None):
         Entity.__init__(self, x, y, w, h)
+        self.color = color
+        self.image = image
         if image is None and color is None:
             self.color = DEFAULT_COLOR
             self.useColor = True
@@ -80,8 +83,8 @@ class Rect(Entity):
             screen.blit(self.image, (self.pos.x - cam.pos.x, self.pos.y - cam.pos.y))
 
     def getCollision(self, rect):
-        xColliding = rect.pos.x <= self.pos.x + self.w and rect.pos.x + rect.w >= self.pos.x
-        yColliding = rect.pos.y <= self.pos.y + self.h and rect.pos.y + rect.h >= self.pos.y
+        xColliding = rect.pos.x < self.pos.x + self.w and rect.pos.x + rect.w > self.pos.x
+        yColliding = rect.pos.y < self.pos.y + self.h and rect.pos.y + rect.h > self.pos.y
 
         collision = (0, 0)
         if xColliding and yColliding:
@@ -105,13 +108,38 @@ class Rect(Entity):
                 collision = (collision[0], smaller.h)
         return collision
     def isColliding(self, rect):
-        xColliding = rect.pos.x <= self.pos.x + self.w and rect.pos.x + rect.w >= self.pos.x
-        yColliding = rect.pos.y <= self.pos.y + self.h and rect.pos.y + rect.h >= self.pos.y
+        xColliding = rect.pos.x < self.pos.x + self.w and rect.pos.x + rect.w > self.pos.x
+        yColliding = rect.pos.y < self.pos.y + self.h and rect.pos.y + rect.h > self.pos.y
 
         return xColliding and yColliding
+    def handleCollision(self, rect):
+        collision = self.getCollision(rect)
+        if collision[0] > collision[1]:
+            self.vel.y = 0
+            if self.pos.y <= rect.pos.y:
+                self.pos.y = rect.pos.y - self.h
+                return True
+            else:
+                self.pos.y = rect.pos.y + rect.h
+        else:
+            if self.vel.x > 0:
+                self.pos.x = rect.pos.x - self.w
+            else:
+                self.pos.x = rect.pos.x + rect.w
 
 
+            self.vel.x = 0
+        return False
 
+
+        '''
+        if self.pos.x <= rect.pos.x and self.pos.y + self.h >= rect.pos.y:
+            self.pos.x = rect.pos.x - self.w
+            self.vel.x = 0
+        elif self.pos.x + self.w >= rect.pos.x + rect.w and self.pos.y + self.h >= rect.pos.y and self.pos.y <= :
+            self.pos.x = rect.pos.x - self.w
+            self.vel.x = 0
+        '''
 
 
 class Physical_Rect(Rect):
@@ -126,19 +154,12 @@ class Physical_Rect(Rect):
 
         if (self.hasGravity):
             self.vel.y += GRAVITY
-
-        if self.pos.y + self.h > SCREEN_HEIGHT: #check if too high
+'''
+        if self.pos.y + self.h > SCREEN_HEIGHT: #check if too low
             self.pos.y = SCREEN_HEIGHT - self.h
             self.vel.y = 0
             self.is_jumping = False
-        '''
-        if self.pos.x + self.w + 10 > SCREEN_WIDTH: #check if too far to right
-            self.pos.x = SCREEN_WIDTH - self.w
-            self.vel.x = 0
-        if self.pos.x - 10 < 0: #check if too far to left
-            self.pos.x = 0
-            self.vel.x = 0
-        '''
+'''
 
 class Camera(Rect):
     def __init__(self, x, y, w, h, player):
@@ -148,11 +169,7 @@ class Camera(Rect):
 
     def update(self):
         self.pos.x = self.player.pos.x + (self.player.w / 2) - self.w / 2
-        #if self.player.pos.y + self.player.h < self.h / 2:
-        #    self.pos.y -= (self.yOffset / 10)
-        #else:
-        #self.pos.y = self.player.pos.y + self.player.h - self.h + self.yOffset
-        self.pos.y = 0 + self.yOffset
+        self.pos.y = self.yOffset
     def render(self, screen, cam):
         pass
 
@@ -164,31 +181,41 @@ class Cop(Physical_Rect):
         Physical_Rect.update(self)
 
 class Coon(Physical_Rect):
-    def __init__(self, x, y, w, h, image):
-        Physical_Rect.__init__(self, x, y, w, h, image=image)
+    def __init__(self, x, y, w, h, image = None, color = None):
+        Physical_Rect.__init__(self, x, y, w, h, image = image, color = color)
         self.lookRight = True;
 
     def update(self):
-        if self.vel.x < 0 and self.lookRight:
-            self.lookRight = False
-            self.image = pygame.transform.flip(self.image, True, False)
-        elif self.vel.x > 0 and (not self.lookRight):
-            self.lookRight = True
-            self.image = pygame.transform.flip(self.image, True, False)
-
+        self.is_jumping = True
+        if (self.image is not None):
+            if self.vel.x < 0 and self.lookRight:
+                self.lookRight = False
+                self.image = pygame.transform.flip(self.image, True, False)
+            elif self.vel.x > 0 and (not self.lookRight):
+                self.lookRight = True
+                self.image = pygame.transform.flip(self.image, True, False)
         Physical_Rect.update(self)
+        for other in collideable:
+            if (self.isColliding(other)):
+                self.handleCollision(other)
+
+
     def jump(self):
         if not self.is_jumping:
             self.is_jumping = True
             self.vel.y -= 30
+    def handleCollision(self, rect):
+        if Rect.handleCollision(self, rect):
+            self.is_jumping = False
+
 
 
 def handle_input():
     common_objs['player'].vel.x = 0
     if keys_down['a']:
-        common_objs['player'].vel.x += -10
+        common_objs['player'].vel.x += -MOVE_SPEED
     if keys_down['d']:
-        common_objs['player'].vel.x += 10
+        common_objs['player'].vel.x += MOVE_SPEED
     if keys_down['space']:
         common_objs['player'].jump()
 
@@ -197,23 +224,19 @@ def update():
     handle_input()
     for obj in gameobjects:
         obj.update()
-    print(common_objs['test_rec'].getCollision(common_objs['other_rec']))
 
 
 def render():
     screen.fill(BLACK)
 
-    #print("------------------")
     for obj in gameobjects:
-
         if obj is not common_objs['cam'] and obj.isColliding(common_objs['cam']):
-            #print("RENDERING " + str(obj))
             obj.render(screen, common_objs['cam'])
 
     pygame.display.flip()
 
 def main():
-    global screen, stop, clock, keys_down, gameobjects, common_objs
+    global screen, stop, clock, keys_down, gameobjects, common_objs, collideable
 
     pygame.init()
     stop = False
@@ -229,28 +252,29 @@ def main():
         'space' : False
     }
 
-    coon = Coon(SCREEN_WIDTH / 2 - 140 / 2, 4 * SCREEN_HEIGHT / 5, 140, 140, pygame.image.load('Images/racoon.png'))
+    #coon = Coon(SCREEN_WIDTH / 2 - 140 / 2, 4 * SCREEN_HEIGHT / 5, 140, 140, pygame.image.load('Images/racoon.png'))
+    coon = Coon(SCREEN_WIDTH / 2 - 140 / 2, 4 * SCREEN_HEIGHT / 5, 50, 50, color = WHITE)
     cop = Cop(300, 0, 130, 180, pygame.image.load('Images/cop.png'))
     cam = Camera(coon.pos.x + (coon.w / 2) - SCREEN_WIDTH / 2, coon.pos.y + coon.h - SCREEN_HEIGHT, SCREEN_WIDTH, SCREEN_HEIGHT, coon)
-
-    testRec = Rect(300, 300, 100, 100, color = VIOLET)
-    otherRec = Physical_Rect(350, 350, 10, 10, 0.1, -0.1, color = RED, hasGravity = False)
+    block = Rect(0, SCREEN_HEIGHT - 200, 50, 200, color = BLUE)
+    ground = Rect(-200, SCREEN_HEIGHT - 50, 800, 50, color = YELLOW)
 
     common_objs = {}
     gameobjects = []
+    collideable = []
     gameobjects.append(coon)
     gameobjects.append(cop)
     gameobjects.append(cam)
+    gameobjects.append(block)
+    gameobjects.append(ground)
 
-    gameobjects.append(testRec)
-    gameobjects.append(otherRec)
+    collideable.append(block)
+    collideable.append(ground)
 
     common_objs['player'] = coon
     common_objs['test_cop'] = cop
     common_objs['cam'] = cam
 
-    common_objs['test_rec'] = testRec
-    common_objs['other_rec'] = otherRec
 
     while not stop:
         for event in pygame.event.get():

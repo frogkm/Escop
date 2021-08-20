@@ -229,7 +229,7 @@ def main():
         'space' : False
     }
 
-    coon = Coon(SCREEN_WIDTH / 2 - 140 / 2, 4 * SCREEN_HEIGHT / 5, 140, 140, pygame.image.load('Images/coon.png'))
+    coon = Coon(SCREEN_WIDTH / 2 - 140 / 2, 4 * SCREEN_HEIGHT / 5, 140, 140, pygame.image.load('Images/racoon.png'))
     cop = Cop(300, 0, 130, 180, pygame.image.load('Images/cop.png'))
     cam = Camera(coon.pos.x + (coon.w / 2) - SCREEN_WIDTH / 2, coon.pos.y + coon.h - SCREEN_HEIGHT, SCREEN_WIDTH, SCREEN_HEIGHT, coon)
 

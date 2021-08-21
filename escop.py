@@ -1,6 +1,7 @@
 import pygame
 #import math
 #import random as rand
+from collections import deque
 
 #colors
 BLACK=pygame.color.THECOLORS["black"]
@@ -21,6 +22,8 @@ SCREEN_WIDTH = 1200
 SCREEN_HEIGHT = 700
 GRAVITY = 1
 MOVE_SPEED = 8
+LOOK_DOWN_DELAY = 100
+LOOK_DOWN_DURATION = 120
 
 class Vector2():
     def __init__(self, x, y):
@@ -115,12 +118,16 @@ class Rect(Entity):
     def handleCollision(self, rect):
         collision = self.getCollision(rect)
         if collision[0] > collision[1]:
-            self.vel.y = 0
-            if self.pos.y <= rect.pos.y:
+
+            #if self.pos.y <= rect.pos.y:
+            if self.vel.y > 0:
+                self.vel.y = 0
                 self.pos.y = rect.pos.y - self.h
                 return True
             else:
+                self.vel.y = 0
                 self.pos.y = rect.pos.y + rect.h
+
         else:
             if self.vel.x > 0:
                 self.pos.x = rect.pos.x - self.w
@@ -132,15 +139,6 @@ class Rect(Entity):
         return False
 
 
-        '''
-        if self.pos.x <= rect.pos.x and self.pos.y + self.h >= rect.pos.y:
-            self.pos.x = rect.pos.x - self.w
-            self.vel.x = 0
-        elif self.pos.x + self.w >= rect.pos.x + rect.w and self.pos.y + self.h >= rect.pos.y and self.pos.y <= :
-            self.pos.x = rect.pos.x - self.w
-            self.vel.x = 0
-        '''
-
 
 class Physical_Rect(Rect):
     def __init__(self, x, y, w, h, x_vel = 0, y_vel = 0, image = None, color = None, hasGravity = True):
@@ -148,30 +146,59 @@ class Physical_Rect(Rect):
         self.vel = Vector2(x_vel, y_vel)
         self.is_jumping = False
         self.hasGravity = hasGravity
+        self.going = False
+
 
     def update(self):
         self.pos = self.pos + self.vel
-
         if (self.hasGravity):
             self.vel.y += GRAVITY
-'''
-        if self.pos.y + self.h > SCREEN_HEIGHT: #check if too low
-            self.pos.y = SCREEN_HEIGHT - self.h
-            self.vel.y = 0
-            self.is_jumping = False
-'''
+        if self.going:
+            gotoStep()
+
+    def goto(self, position, duration):
+        self.going = True
+        self.goHere = position
+        self.goTime = duration
+    def gotoStep(self):
+        pass
 
 class Camera(Rect):
     def __init__(self, x, y, w, h, player):
         Rect.__init__(self, x, y, w, h)
         self.player = player
-        self.yOffset = self.player.h
+        self.lookDownOffset = SCREEN_HEIGHT / 4
+        self.lookDownStep = self.lookDownOffset / LOOK_DOWN_DURATION
+        self.lookDownCount = 0
+
+        self.playerPrev = deque()
+        for i in range(5):
+            self.playerPrev.append(self.player.pos)
 
     def update(self):
-        self.pos.x = self.player.pos.x + (self.player.w / 2) - self.w / 2
-        self.pos.y = self.yOffset
+
+
+        playerPos = self.playerPrev.popleft()
+        self.pos.x = playerPos.x + (self.player.w / 2) - self.w / 2
+        self.pos.y = playerPos.y - 4 * self.h / 7
+
+        if self.lookDownCount >= LOOK_DOWN_DELAY:
+            self.playerPrev.append(Vector2(self.player.pos.x, self.player.pos.y + self.lookDownStep))
+            if not (self.lookDownCount - LOOK_DOWN_DELAY > LOOK_DOWN_DURATION):
+                self.lookDownStep += self.lookDownOffset / LOOK_DOWN_DURATION
+        else:
+            self.playerPrev.append(self.player.pos)
+            self.lookDownStep = self.lookDownOffset / LOOK_DOWN_DURATION
+
+        if keys_down['s']:
+            self.lookDownCount += 1
+        else:
+            self.lookDownCount = 0
+
+
     def render(self, screen, cam):
         pass
+
 
 
 class Cop(Physical_Rect):
@@ -253,7 +280,7 @@ def main():
     }
 
     #coon = Coon(SCREEN_WIDTH / 2 - 140 / 2, 4 * SCREEN_HEIGHT / 5, 140, 140, pygame.image.load('Images/racoon.png'))
-    coon = Coon(SCREEN_WIDTH / 2 - 140 / 2, 4 * SCREEN_HEIGHT / 5, 50, 50, color = WHITE)
+    coon = Coon(SCREEN_WIDTH / 2 - 140 / 2, 4 * SCREEN_HEIGHT / 5, 20, 20, color = WHITE)
     cop = Cop(300, 0, 130, 180, pygame.image.load('Images/cop.png'))
     cam = Camera(coon.pos.x + (coon.w / 2) - SCREEN_WIDTH / 2, coon.pos.y + coon.h - SCREEN_HEIGHT, SCREEN_WIDTH, SCREEN_HEIGHT, coon)
     block = Rect(0, SCREEN_HEIGHT - 200, 50, 200, color = BLUE)
